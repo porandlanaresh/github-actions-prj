@@ -1,6 +1,6 @@
 name: Deploy to aws
 
-on: 
+on:
   push:
     branches:
       - main
@@ -26,7 +26,7 @@ jobs:
         with:
           version: 8
           run_install: false
-          
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -40,36 +40,39 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+
   deploy:
     needs: test
     runs-on: ubuntu-latest
 
     steps:
-      - name: checkout code
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: configure Aws credentials
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6.1.0
         with:
           aws-access-key-id: ${{ secrets.ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.SECRET_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-       - name: Login to Amazon ECR
-         id: login-ecr
-         uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build and push backend image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        run: 
+        run: |
           docker build -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:${{ github.sha }} .
           docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
 
-      - name: Download task defintion
-        run: 
-         aws ecs describe-task-definition --task-definition ${{ env.ECS_TASK_DEFINITION }} \
-         --query taskDefinition > task-definition.json
-         
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ${{ env.ECS_TASK_DEFINITION }} \
+            --query taskDefinition > task-definition.json
+
       - name: Update ECS task definition
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
@@ -85,18 +88,3 @@ jobs:
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
