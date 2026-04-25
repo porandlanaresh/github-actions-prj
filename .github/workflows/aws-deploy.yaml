@@ -73,6 +73,18 @@ jobs:
             --task-definition ${{ env.ECS_TASK_DEFINITION }} \
             --query taskDefinition \
             --output json > task-definition.json
+      - name: Clean task definition
+        run: |
+          jq 'del(
+            .taskDefinitionArn,
+            .revision,
+            .status,
+            .requiresAttributes,
+            .enableFaultInjection,
+            .compatibilities,
+            .registeredAt,
+            .registeredBy
+          )' task-definition.json > cleaned-task-def.json
 
       - name: Update ECS task definition
         id: task-def
@@ -85,7 +97,7 @@ jobs:
       - name: Deploy to Amazon ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          task-definition: ${{ steps.task-def.outputs.cleaned-task-def }}
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
